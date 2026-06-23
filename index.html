@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إسلام خالد حسان - ERP المقاولات 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --primary: #1a2a6c; --dark-blue: #003366; --excel-green: #1d6f42; --accent: #ffd200; --danger: #c0392b; --client-color: #8e44ad; --gold: #d4af37; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f7f6; color: #333; }
+        
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary), var(--dark-blue)); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); width: 100%; max-width: 400px; text-align: center; }
+        
+        .header-main { background: linear-gradient(135deg, var(--primary), var(--dark-blue)); color: white; padding: 25px; border-radius: 0 0 30px 30px; box-shadow: 0 8px 15px rgba(0,0,0,0.2); position: relative; }
+        .card-menu { cursor: pointer; border: none; border-radius: 15px; transition: 0.3s; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.06); text-align: center; padding: 20px; height: 100%; }
+        .card-menu:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.12); border-bottom: 4px solid var(--accent); }
+        .worker-img, .client-img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; }
+        .receipt-container { background: white; padding: 30px; border: 1px solid #333; max-width: 950px; margin: auto; }
+        .fingerprint-area { border: 1px dashed #000; width: 80px; height: 100px; margin: 5px auto; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+        .search-box { border-radius: 20px; padding: 10px 20px; border: 1px solid #ddd; width: 100%; max-width: 400px; }
+        .exit-btn { position: absolute; top: 20px; left: 20px; border-radius: 50%; width: 40px; height: 40px; border: none; background: rgba(255,255,255,0.2); color: white; }
+        
+        .admin-profile-img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent); cursor: pointer; transition: 0.3s; object-fit: cover; }
+        .admin-profile-img:hover { transform: scale(1.1); }
+        .dev-card { text-align: center; background: linear-gradient(to bottom, #fff, #f9f9f9); border-radius: 20px; padding: 20px; }
+        .dev-photo-large { width: 150px; height: 150px; border-radius: 50%; border: 5px solid var(--primary); margin-bottom: 15px; object-fit: cover; }
+
+        .role-admin-only { display: none; } 
+
+        @media print { 
+            .no-print { display: none !important; } 
+            .receipt-container, .modal-content { border: none !important; box-shadow: none !important; width: 100%; margin: 0; padding: 0; } 
+            body { background: white; } 
+            .modal { position: relative !important; display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="login-overlay">
+    <div class="login-card">
+        <img src="1000231791.png" class="dev-photo-large mb-3" alt="إسلام خالد حسان">
+        <h4 class="fw-bold mb-4 border-bottom pb-2">تسجيل دخول النظام</h4>
+        <input type="text" id="user_login" class="form-control mb-3 text-center" placeholder="اسم المستخدم">
+        <input type="password" id="pass_login" class="form-control mb-4 text-center" placeholder="كلمة المرور">
+        <button type="button" class="btn btn-primary w-100 fw-bold py-2" onclick="checkLogin()">دخول للنظام</button>
+        <p id="login-msg" class="text-danger mt-2 small" style="display:none;">بيانات الدخول غير صحيحة!</p>
+    </div>
+</div>
+
+<div id="main-system-content" style="display:none;">
+    <div class="header-main text-center no-print">
+        <button class="exit-btn" onclick="logout()" title="خروج"><i class="fas fa-power-off"></i></button>
+        <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
+            <img src="1000231791.png" class="admin-profile-img shadow" data-bs-toggle="modal" data-bs-target="#developerInfoModal" title="معلومات المطور">
+            <h2 class="fw-bold mb-0">إسلام خالد حسان للمقاولات العامة</h2>
+        </div>
+        <div class="d-flex justify-content-center gap-4 mt-2 opacity-75 small">
+            <span class="badge bg-white text-dark py-2 px-3"><i class="fas fa-user text-primary me-1"></i> المستخدم: <span id="current-user-display">..</span></span>
+            <span><i class="fas fa-calendar-alt"></i> مايو 2026</span>
+        </div>
+        <div class="mt-3">
+            <input type="text" id="globalSearch" class="search-box" placeholder="بحث سريع..." onkeyup="searchEverything()">
+        </div>
+    </div>
+
+    <div class="container py-4 no-print">
+        <div class="row g-3 mb-4 role-admin-only">
+            <div class="col-md-4"><button class="btn btn-success w-100 shadow-sm" onclick="exportToExcel()"><i class="fas fa-file-excel me-2"></i> تصدير (Excel)</button></div>
+            <div class="col-md-4"><button class="btn btn-dark w-100 shadow-sm" onclick="backupJSON()"><i class="fas fa-save me-2"></i> نسخة احتياطية</button></div>
+            <div class="col-md-4"><button class="btn btn-outline-primary bg-white w-100 shadow-sm" onclick="document.getElementById('importFile').click()"><i class="fas fa-upload me-2"></i> استيراد بيانات</button><input type="file" id="importFile" class="d-none" onchange="importData(event)"></div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-2 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#clientModal"><i class="fas fa-user-friends fa-2x text-warning mb-2"></i><h6>العملاء</h6></div></div>
+            <div class="col-md-2 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#projectModal"><i class="fas fa-building fa-2x text-success mb-2"></i><h6>المشاريع</h6></div></div>
+            <div class="col-md-2 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#workerModal"><i class="fas fa-hard-hat fa-2x text-info mb-2"></i><h6>العمال</h6></div></div>
+            <div class="col-md-2 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#dailyModal"><i class="fas fa-clock fa-2x text-primary mb-2"></i><h6>اليومية والإضافي</h6></div></div>
+            <div class="col-md-2 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#clientDrawModal"><i class="fas fa-hand-holding-usd fa-2x text-purple mb-2" style="color:var(--client-color)"></i><h6>مسحوبات العملاء</h6></div></div>
+            <div class="col-md-2 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#settlementModal"><i class="fas fa-file-invoice-dollar fa-2x text-danger mb-2"></i><h6>كشوفات الحساب</h6></div></div>
+            <div class="col-md-3 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#projectReportModal"><i class="fas fa-chart-line fa-2x text-secondary mb-2"></i><h6>تقارير المشاريع</h6></div></div>
+            <div class="col-md-3 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#workerBalancesModal"><i class="fas fa-wallet fa-2x text-success mb-2"></i><h6>أرصدة العمال</h6></div></div>
+            <div class="col-md-3 col-6"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#masterDataModal" onclick="refreshMasterTables()"><i class="fas fa-print fa-2x text-primary mb-2"></i><h6>السجل العام</h6></div></div>
+            <div class="col-md-3 col-6 role-admin-only"><div class="card-menu" data-bs-toggle="modal" data-bs-target="#settingsModal"><i class="fas fa-cogs fa-2x text-dark mb-2"></i><h6>الإعدادات</h6></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال الصفحة التعريفية للمطور -->
+<div class="modal fade" id="developerInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title">بطاقة التعريف المهنية</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body dev-card">
+                <img src="1000231791.png" class="dev-photo-large shadow" alt="إسلام خالد حسان">
+                <h3 class="fw-bold text-primary mb-1">إسلام خالد حسان</h3>
+                <p class="text-muted mb-4">مدير ومطور نظام ERP المقاولات</p>
+                <div class="list-group list-group-flush text-end">
+                    <div class="list-group-item d-flex align-items-center justify-content-between py-3">
+                        <span class="fw-bold"><i class="fas fa-phone-alt text-success me-2"></i> رقم الهاتف:</span>
+                        <span dir="ltr" class="fs-5">776543059</span>
+                    </div>
+                    <div class="list-group-item d-flex align-items-center justify-content-between py-3">
+                        <span class="fw-bold"><i class="fas fa-envelope text-danger me-2"></i> البريد الإلكتروني:</span>
+                        <span class="small">islamalmoliky@Gmail.com</span>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-4" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال العملاء -->
+<div class="modal fade" id="clientModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning"><h5><i class="fas fa-user-plus me-2"></i> إدارة العملاء</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div id="client-form" class="row g-2 mb-3 p-3 border rounded bg-light">
+                    <input type="hidden" id="edit_client_index" value="-1">
+                    <div class="col-md-4"><input type="text" id="c_name" class="form-control" placeholder="اسم العميل"></div>
+                    <div class="col-md-4"><input type="text" id="c_phone" class="form-control" placeholder="رقم الهاتف"></div>
+                    <div class="col-md-4"><input type="file" id="c_file" class="form-control" onchange="previewClientImg(this)"></div>
+                    <button type="button" id="saveClientBtn" class="btn btn-warning w-100 mt-2 fw-bold" onclick="addClient()">إضافة العميل</button>
+                </div>
+                <table class="table table-hover text-center align-middle shadow-sm">
+                    <thead class="table-dark"><tr><th>الصورة</th><th>الاسم</th><th>الهاتف</th><th>إجراء</th></tr></thead>
+                    <tbody id="clientTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال المشاريع -->
+<div class="modal fade" id="projectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white"><h5><i class="fas fa-city me-2"></i> تعريف المشاريع والتعاقدات</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div id="project-form" class="row g-2 mb-3 p-3 border rounded bg-light">
+                    <input type="hidden" id="edit_project_index" value="-1">
+                    <div class="col-md-6"><input type="text" id="p_name" class="form-control" placeholder="اسم المشروع"></div>
+                    <div class="col-md-6"><select id="p_client" class="form-select"></select></div>
+                    <div class="col-md-4"><input type="number" id="p_area" class="form-control" placeholder="المتر المكعب (إختياري)" oninput="calcProjectTotal()"></div>
+                    <div class="col-md-4"><input type="number" id="p_price" class="form-control" placeholder="سعر المتر (إختياري)" oninput="calcProjectTotal()"></div>
+                    <div class="col-md-4"><input type="number" id="p_total" class="form-control" placeholder="المبلغ المتفق عليه"></div>
+                    <div class="col-12"><textarea id="p_notes" class="form-control" placeholder="ملاحظات إضافية"></textarea></div>
+                    <button type="button" id="saveProjectBtn" class="btn btn-success w-100 mt-2 fw-bold" onclick="addProject()">حفظ المشروع</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover text-center">
+                        <thead class="table-dark"><tr><th>رقم</th><th>المشروع</th><th>العميل</th><th>المبلغ</th><th>إجراء</th></tr></thead>
+                        <tbody id="projectTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال العمال -->
+<div class="modal fade" id="workerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white"><h5><i class="fas fa-users me-2"></i> سجل العمال</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div id="worker-form" class="row g-2 mb-3 p-3 bg-light border rounded">
+                    <input type="hidden" id="edit_worker_index" value="-1">
+                    <div class="col-md-6"><input type="text" id="w_name" class="form-control" placeholder="اسم العامل"></div>
+                    <div class="col-md-3"><input type="text" id="w_job" class="form-control" placeholder="المهنة"></div>
+                    <div class="col-md-3"><input type="file" id="w_file" class="form-control" onchange="previewWorkerImg(this)"></div>
+                    <button type="button" id="saveWorkerBtn" class="btn btn-info w-100 mt-2 text-white fw-bold" onclick="addWorker()">إضافة عامل</button>
+                </div>
+                <table class="table table-hover text-center align-middle">
+                    <thead class="table-dark"><tr><th>الصورة</th><th>الاسم</th><th>المهنة</th><th>إجراء</th></tr></thead>
+                    <tbody id="workerTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال اليومية والإضافي -->
+<div class="modal fade" id="dailyModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white"><h5><i class="fas fa-edit me-2"></i> تسجيل العمل اليومي والإضافي والمصاريف</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- اليومية العادية -->
+                    <div class="col-md-4 border-end">
+                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">الحضور اليومي (عادي)</h6>
+                        <div class="mb-2 small"><label>التاريخ:</label><input type="date" id="att_date" class="form-control"></div>
+                        <div class="mb-2 small"><label>العامل:</label><select id="att_worker" class="form-select"></select></div>
+                        <div class="mb-2 small"><label>المشروع:</label><select id="att_project" class="form-select"></select></div>
+                        <div class="mb-2 small"><label>أجرة اليوم:</label><input type="number" id="att_rate" class="form-control" value="0"></div>
+                        <div id="days_grid" class="p-2 border rounded mb-3 bg-light" style="max-height: 200px; overflow-y: auto;"></div>
+                        <button type="button" class="btn btn-primary btn-sm w-100" onclick="saveAttendance('عادي')">ترحيل اليومية</button>
+                    </div>
+                    <!-- الإضافي (نفس آلية اليومية) -->
+                    <div class="col-md-4 border-end">
+                        <h6 class="text-warning fw-bold mb-3 border-bottom pb-2">شغل إضافي (أوفرتايم)</h6>
+                        <div class="mb-2 small"><label>التاريخ:</label><input type="date" id="extra_date" class="form-control"></div>
+                        <div class="mb-2 small"><label>العامل:</label><select id="extra_worker" class="form-select"></select></div>
+                        <div class="mb-2 small"><label>المشروع:</label><select id="extra_project" class="form-select"></select></div>
+                        <div class="mb-2 small"><label>أجرة الإضافي:</label><input type="number" id="extra_rate" class="form-control" value="0"></div>
+                        <div id="extra_days_grid" class="p-2 border rounded mb-3 bg-light" style="max-height: 200px; overflow-y: auto;"></div>
+                        <button type="button" class="btn btn-warning btn-sm w-100 fw-bold" onclick="saveAttendance('إضافي')">ترحيل الإضافي</button>
+                    </div>
+                    <!-- المصاريف -->
+                    <div class="col-md-4">
+                        <h6 class="text-danger fw-bold mb-3 border-bottom pb-2">المسحوبات والمصاريف</h6>
+                        <div class="mb-2 small"><label>التاريخ:</label><input type="date" id="exp_date" class="form-control"></div>
+                        <div class="mb-2 small"><label>العامل:</label><select id="exp_worker" class="form-select"></select></div>
+                        <div class="mb-2 small"><label>المشروع:</label><select id="exp_project" class="form-select"></select></div>
+                        <div class="mb-2 small"><label>المبلغ:</label><input type="number" id="exp_amount" class="form-control" value="0"></div>
+                        <div class="mb-2 small"><label>البيان:</label><input type="text" id="exp_note" class="form-control"></div>
+                        <div id="exp_days_grid" class="d-flex flex-wrap gap-2 mb-3"></div>
+                        <button type="button" class="btn btn-danger btn-sm w-100" onclick="saveExpenses()">ترحيل المصاريف</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال عرض بيانات حساب (تفصيلي) -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white"><h5><i class="fas fa-search me-2"></i> عرض تفاصيل الحساب</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body" id="details-content">
+                <!-- يملأ برمجياً -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال مسحوبات العملاء -->
+<div class="modal fade" id="clientDrawModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-top border-5" style="border-color: var(--client-color) !important">
+            <div class="modal-header"><h5><i class="fas fa-donate me-2" style="color:var(--client-color)"></i> تسجيل مستلم من عميل</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body bg-light">
+                <div class="mb-3"><label class="fw-bold">التاريخ:</label><input type="date" id="cd_date" class="form-control"></div>
+                <div class="mb-3"><label class="fw-bold">العميل:</label><select id="cd_client" class="form-select" onchange="updateProjectListForClient()"></select></div>
+                <div class="mb-3"><label class="fw-bold">المشروع:</label><select id="cd_project" class="form-select"></select></div>
+                <div class="mb-3"><label class="fw-bold text-success">المبلغ المستلم:</label><input type="number" id="cd_amount" class="form-control form-control-lg text-center" value="0"></div>
+                <div class="mb-3"><label class="fw-bold">البيان:</label><textarea id="cd_note" class="form-control" rows="2"></textarea></div>
+                <button type="button" class="btn w-100 text-white fw-bold shadow" style="background-color: var(--client-color)" onclick="saveClientDraw()">حفظ وتوثيق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال كشوفات الحساب -->
+<div class="modal fade" id="settlementModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white"><h5><i class="fas fa-file-pdf me-2"></i> كشوفات حساب العمال</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-3 border-end no-print">
+                        <label class="fw-bold small">اختر العامل:</label>
+                        <select id="set_worker_select" class="form-select mb-3"></select>
+                        <label class="fw-bold small">مشروع محدد:</label>
+                        <select id="set_project_select" class="form-select mb-3"><option value="all">كل المشاريع</option></select>
+                        <label class="fw-bold small">من تاريخ:</label>
+                        <input type="date" id="set_from_date" class="form-control mb-2">
+                        <label class="fw-bold small">إلى تاريخ:</label>
+                        <input type="date" id="set_to_date" class="form-control mb-3">
+                        <button type="button" class="btn btn-primary w-100 mb-2" onclick="generateWorkerReport()">تحديث الكشف</button>
+                        <button type="button" class="btn btn-dark w-100 mb-2" onclick="window.print()">طباعة الكشف</button>
+                    </div>
+                    <div class="col-md-9">
+                        <div id="receipt-box" class="receipt-container">
+                            <div class="text-center border-bottom pb-2 mb-3">
+                                <h4 class="fw-bold">إسلام خالد حسان للمقاولات العامة</h4>
+                                <h5>كشف حساب مالي تفصيلي</h5>
+                                <small>الفترة: <span id="report_period">...</span></small>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <div class="col-2"><img id="rep_w_img" src="" class="worker-img" style="width:70px; height:70px;"></div>
+                                <div class="col-10">
+                                    <h6 class="mb-1">اسم العامل: <strong id="rep_w_name"></strong></h6>
+                                    <h6 class="mb-0 text-muted">المهنة: <span id="rep_w_job"></span> | المشروع: <span id="rep_proj_name">الكل</span></h6>
+                                </div>
+                            </div>
+                            <table class="table table-bordered table-sm text-center">
+                                <thead class="table-secondary"><tr><th>التاريخ</th><th>المشروع</th><th>البيان</th><th>مستحق (+)</th><th>مسحوب (-)</th></tr></thead>
+                                <tbody id="report_table_body"></tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr><td colspan="3">الإجمالي</td><td id="total_earned" class="text-success">0</td><td id="total_spent" class="text-danger">0</td></tr>
+                                    <tr class="table-warning"><td colspan="4">الصافي المتبقي للعامل</td><td id="total_net" class="fs-5">0</td></tr>
+                                </tfoot>
+                            </table>
+                            <div class="row mt-4 text-center small">
+                                <div class="col-4">توقيع العامل<div class="mt-4 border-top border-dark mx-auto w-75"></div></div>
+                                <div class="col-4">بصمة الإبهام<div class="fingerprint-area">البصمة</div></div>
+                                <div class="col-4">ختم الإدارة<div class="mt-3 opacity-25">خـتـم</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال أرصدة العمال -->
+<div class="modal fade" id="workerBalancesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white"><h5><i class="fas fa-wallet me-2"></i> أرصدة مديونيات العمال</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div id="balances-print-area" class="receipt-container">
+                    <div class="text-center mb-3"><h4 class="fw-bold">إسلام خالد حسان للمقاولات</h4><h5>كشف أرصدة العمال الإجمالي</h5><hr></div>
+                    <table class="table table-bordered table-striped text-center align-middle">
+                        <thead class="table-dark"><tr><th>اسم العامل</th><th>إجمالي المستحق (+)</th><th>إجمالي المسحوب (-)</th><th>الرصيد المتبقي</th></tr></thead>
+                        <tbody id="balances_table_body"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-success mt-3 no-print" onclick="window.print()">طباعة الجدول</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال تقارير المشاريع -->
+<div class="modal fade" id="projectReportModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white"><h5><i class="fas fa-chart-pie me-2"></i> تقارير المشاريع والعملاء</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="row mb-4 no-print"><div class="col-md-4"><label>اختر المشروع:</label><select id="rep_project_select" class="form-select" onchange="generateProjectReport()"></select></div></div>
+                <div id="project-report-print" class="receipt-container">
+                    <div class="text-center mb-4"><h3 class="fw-bold">إسلام خالد حسان للمقاولات</h3><h4>تقرير حالة المشروع المالية</h4><hr></div>
+                    <div class="row mb-4 bg-light p-3 border">
+                        <div class="col-md-6 border-end">
+                            <h6>المشروع: <strong id="rp_p_name">...</strong></h6>
+                            <h6>العميل: <strong id="rp_c_name">...</strong></h6>
+                            <h6>المبلغ المتفق عليه: <strong id="rp_p_total" class="text-primary">0</strong></h6>
+                        </div>
+                        <div class="col-md-6 text-md-start">
+                            <h6>إجمالي المصاريف: <strong id="rp_p_spent" class="text-danger">0</strong></h6>
+                            <h6>المستلم من العميل: <strong id="rp_p_draws" class="text-success">0</strong></h6>
+                            <h5 class="mt-2">المتبقي بذمة العميل: <strong id="rp_p_rem" class="badge bg-warning text-dark">0</strong></h5>
+                        </div>
+                    </div>
+                    <table class="table table-striped table-bordered text-center">
+                        <thead class="table-dark"><tr><th>التاريخ</th><th>البيان</th><th>النوع</th><th>المبلغ (-)</th><th>المبلغ (+)</th></tr></thead>
+                        <tbody id="project_rep_table"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-secondary mt-3 no-print" onclick="window.print()">طباعة التقرير</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال الإعدادات -->
+<div class="modal fade" id="settingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white"><h5><i class="fas fa-cogs me-2"></i> الإعدادات</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <h6 class="fw-bold border-bottom pb-2">إدارة المستخدمين</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-7"><input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="المستخدم"></div>
+                    <div class="col-5"><input type="text" id="new_user_pass" class="form-control form-control-sm" placeholder="كلمة السر"></div>
+                    <div class="col-12 mt-1"><select id="new_user_role" class="form-select form-select-sm"><option value="admin">مدير</option><option value="accountant">محاسب</option></select></div>
+                    <button type="button" class="btn btn-sm btn-dark mt-2" onclick="addUser()">إضافة</button>
+                </div>
+                <table class="table table-sm text-center"><thead><tr><th>المستخدم</th><th>الصلاحية</th><th>حذف</th></tr></thead><tbody id="usersTableBody"></tbody></table>
+                <hr>
+                <div class="bg-light p-3 rounded">
+                    <h6 class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> منطقة الخطر</h6>
+                    <button class="btn btn-danger btn-sm w-100 mt-2" onclick="secureReset()">تهيئة البيانات (مسح شامل)</button>
+                </div>
+                <div class="mt-3 small text-muted text-center">إصدار النظام: 2026.1.1 | المطور: إسلام خالد حسان</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال السجل العام -->
+<div class="modal fade" id="masterDataModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white"><h5>السجل العام للبيانات</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div id="master-print-area">
+                    <div class="text-center mb-4"><h2 class="fw-bold">إسلام خالد حسان للمقاولات العامة</h2><hr></div>
+                    <div class="mb-5"><h5>سجل العمال</h5><table class="table table-bordered text-center align-middle"><thead class="table-light"><tr><th>الصورة</th><th>الاسم</th><th>المهنة</th></tr></thead><tbody id="master_worker_body"></tbody></table></div>
+                    <div class="mb-5"><h5>سجل العملاء</h5><table class="table table-bordered text-center align-middle"><thead class="table-light"><tr><th>الصورة</th><th>الاسم</th><th>الهاتف</th></tr></thead><tbody id="master_client_body"></tbody></table></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('islam_erp_v2')) || {
+        workers: [], projects: [], clients: [], entries: [], expenses: [], clientDraws: [],
+        users: [{ name: "إسلام", pass: "3461", role: "admin" }]
+    };
+
+    // ===== تهيئة هياكل إدارة المستخدمين إذا كانت قديمة =====
+    if (!db.users) db.users = [{ name: "إسلام", pass: "3461", role: "admin" }];
+    if (!db.auditLog) db.auditLog = [];
+
+    const weekDays = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+    let tempWorkerImg = "";
+    let tempClientImg = "";
+
+    function checkLogin() {
+        const user = document.getElementById('user_login').value;
+        const pass = document.getElementById('pass_login').value;
+        const found = db.users.find(u => u.name === user && u.pass === pass);
+        if(found) {
+            if (found.active === false) {
+                document.getElementById('login-msg').innerText = "هذا الحساب موقوف، راجع المدير.";
+                document.getElementById('login-msg').style.display = "block";
+                return;
+            }
+            document.getElementById('login-overlay').style.display = "none";
+            document.getElementById('main-system-content').style.display = "block";
+            document.getElementById('current-user-display').innerText = found.name;
+            sessionStorage.setItem('isLoggedIn', 'true');
+            sessionStorage.setItem('userRole', found.role);
+            sessionStorage.setItem('currentUser', found.name);
+            // تسجيل دخول في السجل
+            db.auditLog.push({ action: "تسجيل دخول", user: found.name, role: found.role, date: new Date().toISOString() });
+            save();
+            applyPermissions(found.role);
+        } else { document.getElementById('login-msg').style.display = "block"; }
+    }
+
+    function applyPermissions(role) {
+        if(role === 'admin') { document.querySelectorAll('.role-admin-only').forEach(el => el.style.setProperty('display', 'flex', 'important')); }
+        else { document.querySelectorAll('.role-admin-only').forEach(el => el.style.setProperty('display', 'none', 'important')); }
+    }
+
+    function logout() { if(confirm("خروج؟")) { sessionStorage.clear(); location.reload(); } }
+    function save() { localStorage.setItem('islam_erp_v2', JSON.stringify(db)); refreshAll(); }
+
+    function previewWorkerImg(input) { if (input.files && input.files[0]) { let r = new FileReader(); r.onload = e => tempWorkerImg = e.target.result; r.readAsDataURL(input.files[0]); } }
+    function previewClientImg(input) { if (input.files && input.files[0]) { let r = new FileReader(); r.onload = e => tempClientImg = e.target.result; r.readAsDataURL(input.files[0]); } }
+
+    // --- إضافة وتعديل ---
+    function addWorker() {
+        const name = document.getElementById('w_name').value;
+        const idx = parseInt(document.getElementById('edit_worker_index').value);
+        if(!name) return alert("الاسم مطلوب");
+        const workerData = { name, job: document.getElementById('w_job').value, photo: tempWorkerImg || "https://via.placeholder.com/50" };
+        if(idx === -1) db.workers.push(workerData); else db.workers[idx] = workerData;
+        document.getElementById('edit_worker_index').value = "-1";
+        document.getElementById('saveWorkerBtn').innerText = "إضافة عامل";
+        tempWorkerImg = ""; save();
+    }
+
+    function editWorker(idx) {
+        const w = db.workers[idx];
+        document.getElementById('w_name').value = w.name;
+        document.getElementById('w_job').value = w.job;
+        document.getElementById('edit_worker_index').value = idx;
+        document.getElementById('saveWorkerBtn').innerText = "تحديث البيانات";
+        bootstrap.Modal.getInstance(document.getElementById('workerModal')).show();
+    }
+
+    function addClient() {
+        const name = document.getElementById('c_name').value;
+        const idx = parseInt(document.getElementById('edit_client_index').value);
+        if(!name) return alert("الاسم مطلوب");
+        const clientData = { name, phone: document.getElementById('c_phone').value, photo: tempClientImg || "https://via.placeholder.com/50" };
+        if(idx === -1) db.clients.push(clientData); else db.clients[idx] = clientData;
+        document.getElementById('edit_client_index').value = "-1";
+        document.getElementById('saveClientBtn').innerText = "إضافة العميل";
+        tempClientImg = ""; save();
+    }
+
+    function editClient(idx) {
+        const c = db.clients[idx];
+        document.getElementById('c_name').value = c.name;
+        document.getElementById('c_phone').value = c.phone;
+        document.getElementById('edit_client_index').value = idx;
+        document.getElementById('saveClientBtn').innerText = "تحديث العميل";
+    }
+
+    function addProject() {
+        const name = document.getElementById('p_name').value;
+        const idx = parseInt(document.getElementById('edit_project_index').value);
+        if(!name) return alert("المشروع مطلوب");
+        const projectData = {
+            id: idx === -1 ? db.projects.length + 1 : db.projects[idx].id,
+            name: name, client: document.getElementById('p_client').value,
+            total: document.getElementById('p_total').value, area: document.getElementById('p_area').value,
+            price: document.getElementById('p_price').value, notes: document.getElementById('p_notes').value
+        };
+        if(idx === -1) db.projects.push(projectData); else db.projects[idx] = projectData;
+        document.getElementById('edit_project_index').value = "-1";
+        document.getElementById('saveProjectBtn').innerText = "حفظ المشروع";
+        save();
+    }
+
+    function editProject(idx) {
+        const p = db.projects[idx];
+        document.getElementById('p_name').value = p.name;
+        document.getElementById('p_client').value = p.client;
+        document.getElementById('p_area').value = p.area;
+        document.getElementById('p_price').value = p.price;
+        document.getElementById('p_total').value = p.total;
+        document.getElementById('p_notes').value = p.notes;
+        document.getElementById('edit_project_index').value = idx;
+        document.getElementById('saveProjectBtn').innerText = "تحديث المشروع";
+    }
+
+    function calcProjectTotal() {
+        let area = parseFloat(document.getElementById('p_area').value) || 0;
+        let price = parseFloat(document.getElementById('p_price').value) || 0;
+        if(area > 0 && price > 0) document.getElementById('p_total').value = area * price;
+    }
+
+    // --- حضور وإضافي (نفس المنطق) ---
+    function saveAttendance(mode) {
+        const prefix = mode === 'عادي' ? 'att' : 'extra';
+        const worker = document.getElementById(prefix+'_worker').value;
+        const project = document.getElementById(prefix+'_project').value;
+        const rate = parseFloat(document.getElementById(prefix+'_rate').value) || 0;
+        const cDate = document.getElementById(prefix+'_date').value;
+        const gridId = mode === 'عادي' ? 'days_grid' : 'extra_days_grid';
+        const radioName = mode === 'عادي' ? 'day_' : 'extra_day_';
+
+        let totalDays = 0;
+        weekDays.forEach(d => { 
+            const input = document.querySelector(`input[name="${radioName}${d}"]:checked`);
+            if(input) totalDays += parseFloat(input.value); 
+        });
+
+        if(totalDays > 0) {
+            db.entries.push({ worker, project, amount: totalDays * rate, date: cDate, type: mode === 'عادي' ? 'يومية عمل' : 'إضافي عمل' });
+            save(); alert("تم ترحيل " + mode);
+        }
+    }
+
+    function saveExpenses() {
+        const worker = document.getElementById('exp_worker').value;
+        const project = document.getElementById('exp_project').value;
+        const amount = parseFloat(document.getElementById('exp_amount').value) || 0;
+        const note = document.getElementById('exp_note').value;
+        const cDate = document.getElementById('exp_date').value;
+        let checked = false;
+        weekDays.slice(0,6).forEach(d => {
+            if(document.getElementById('chk_'+d).checked) {
+                db.expenses.push({ worker, project, amount, note, date: cDate, day: d });
+                checked = true;
+            }
+        });
+        if(checked) { save(); alert("تم الحفظ"); }
+    }
+
+    // ===== مسحوبات العملاء - مربوط بحساب العميل وحساب المشروع =====
+    function saveClientDraw() {
+        const client = document.getElementById('cd_client').value;
+        const project = document.getElementById('cd_project').value;
+        const amount = parseFloat(document.getElementById('cd_amount').value) || 0;
+        const date = document.getElementById('cd_date').value;
+        const note = document.getElementById('cd_note').value;
+
+        // التحقق من العميل والمشروع
+        if (!client) return alert("الرجاء اختيار العميل");
+        if (!project) return alert("الرجاء اختيار المشروع");
+        if (amount <= 0) return alert("الرجاء إدخال مبلغ صحيح");
+
+        // التحقق من أن المشروع مسند للعميل المختار
+        const proj = db.projects.find(p => p.name === project);
+        if (proj && proj.client && proj.client !== client) {
+            if (!confirm(`هذا المشروع مسجل للعميل "${proj.client}" وليس "${client}". هل تريد المتابعة؟`)) return;
+        }
+
+        // التحقق من أن المبلغ لا يتجاوز المتبقي على العميل في هذا المشروع
+        const projTotal = parseFloat(proj ? proj.total : 0) || 0;
+        const alreadyPaid = db.clientDraws.filter(d => d.project === project).reduce((s, d) => s + parseFloat(d.amount || 0), 0);
+        const remaining = projTotal - alreadyPaid;
+        if (proj && remaining < amount) {
+            if (!confirm(`تنبيه: المبلغ المطلوب (${amount}) أكبر من المتبقي على العميل (${remaining}). هل تريد المتابعة؟`)) return;
+        }
+
+        // تسجيل المسحوب
+        db.clientDraws.push({ client, project, amount, note, date });
+        db.auditLog.push({ action: "تسجيل مستلم من عميل", user: sessionStorage.getItem('currentUser') || "", client, project, amount, date });
+        save();
+        alert(`تم الحفظ بنجاح.\nالمستلم: ${amount}\nالمتبقي على المشروع: ${(remaining - amount)}`);
+    }
+
+    // تحديث قائمة المشاريع حسب العميل المختار في مسحوبات العملاء
+    function updateProjectListForClient() {
+        const selClient = document.getElementById('cd_client').value;
+        const projSelect = document.getElementById('cd_project');
+        if (!projSelect) return;
+        let projs = db.projects;
+        if (selClient) projs = db.projects.filter(p => !p.client || p.client === selClient);
+        projSelect.innerHTML = projs.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+    }
+
+    // --- عرض بيانات الحساب ---
+    function showDetails(type, name) {
+        let html = '';
+        let totalIn = 0, totalOut = 0, net = 0;
+
+        if (type === 'worker') {
+            html = `<h4><i class="fas fa-user text-info"></i> سجل تفصيلي: ${name}</h4>`;
+            // حساب الرصيد الإجمالي
+            const earned = db.entries.filter(e => e.worker === name).reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+            const spent = db.expenses.filter(x => x.worker === name).reduce((s, x) => s + parseFloat(x.amount || 0), 0);
+            const balance = earned - spent;
+            html += `<div class="row g-2 mb-3 text-center">
+                <div class="col-md-4"><div class="border rounded p-2 bg-success text-white"><small>إجمالي المستحق</small><h5 class="mb-0">${earned}</h5></div></div>
+                <div class="col-md-4"><div class="border rounded p-2 bg-danger text-white"><small>إجمالي المسحوب</small><h5 class="mb-0">${spent}</h5></div></div>
+                <div class="col-md-4"><div class="border rounded p-2 bg-warning"><small>الرصيد المتبقي</small><h5 class="mb-0">${balance}</h5></div></div>
+            </div>`;
+            html += `<table class="table table-sm table-bordered mt-3"><thead class="table-dark"><tr><th>التاريخ</th><th>المشروع</th><th>البيان</th><th>المبلغ (+)</th><th>المبلغ (-)</th></tr></thead><tbody>`;
+            let filtered = db.entries.filter(e => e.worker === name).map(e => ({...e, _kind: 'entry'}))
+                .concat(db.expenses.filter(x => x.worker === name).map(x => ({...x, _kind: 'exp', type: x.note + ' ('+x.day+')'})));
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+            filtered.forEach(item => {
+                if (item._kind === 'entry') {
+                    html += `<tr><td>${item.date}</td><td>${item.project||''}</td><td>${item.type||''}</td><td class="text-success">${item.amount}</td><td>0</td></tr>`;
+                } else {
+                    html += `<tr><td>${item.date}</td><td>${item.project||''}</td><td>${item.type||''}</td><td>0</td><td class="text-danger">${item.amount}</td></tr>`;
+                }
+            });
+            html += `</tbody></table>`;
+        } else if (type === 'client') {
+            html = `<h4><i class="fas fa-user-friends text-warning"></i> سجل تفصيلي: ${name}</h4>`;
+
+            // جمع كل مشاريع هذا العميل
+            const clientProjects = db.projects.filter(p => p.client === name);
+            // حساب إجمالي التعاقدات والمستلم
+            const totalContracted = clientProjects.reduce((s, p) => s + parseFloat(p.total || 0), 0);
+            const totalReceived = db.clientDraws.filter(d => d.client === name).reduce((s, d) => s + parseFloat(d.amount || 0), 0);
+            const totalRemaining = totalContracted - totalReceived;
+
+            html += `<div class="row g-2 mb-3 text-center">
+                <div class="col-md-4"><div class="border rounded p-2 bg-primary text-white"><small>إجمالي العقود</small><h5 class="mb-0">${totalContracted}</h5></div></div>
+                <div class="col-md-4"><div class="border rounded p-2 bg-success text-white"><small>إجمالي المستلم</small><h5 class="mb-0">${totalReceived}</h5></div></div>
+                <div class="col-md-4"><div class="border rounded p-2 bg-warning"><small>المتبقي بذمته</small><h5 class="mb-0">${totalRemaining}</h5></div></div>
+            </div>`;
+
+            // جدول المشاريع وحالة كل واحد
+            html += `<h6 class="mt-3 border-bottom pb-2">المشاريع وحالة السداد:</h6>`;
+            html += `<table class="table table-sm table-bordered text-center align-middle"><thead class="table-dark"><tr><th>المشروع</th><th>المبلغ المتفق عليه</th><th>المستلم</th><th>المتبقي</th><th>التفاصيل</th></tr></thead><tbody>`;
+            if (clientProjects.length === 0) {
+                html += `<tr><td colspan="5" class="text-muted">لا توجد مشاريع مسجلة لهذا العميل</td></tr>`;
+            }
+            clientProjects.forEach(p => {
+                const paid = db.clientDraws.filter(d => d.client === name && d.project === p.name).reduce((s, d) => s + parseFloat(d.amount || 0), 0);
+                const rem = parseFloat(p.total || 0) - paid;
+                const badge = rem <= 0 ? '<span class="badge bg-success">مسدد</span>' : (paid > 0 ? '<span class="badge bg-warning text-dark">دفعات</span>' : '<span class="badge bg-danger">لم يدفع</span>');
+                html += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.total||0}</td>
+                    <td class="text-success fw-bold">${paid}</td>
+                    <td class="text-danger fw-bold">${rem}</td>
+                    <td>${badge}</td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+
+            // جدول كل المسحوبات
+            html += `<h6 class="mt-4 border-bottom pb-2">سجل الدفعات:</h6>`;
+            html += `<table class="table table-sm table-bordered text-center"><thead class="table-secondary"><tr><th>التاريخ</th><th>المشروع</th><th>البيان</th><th>المبلغ</th></tr></thead><tbody>`;
+            const draws = db.clientDraws.filter(d => d.client === name);
+            if (draws.length === 0) {
+                html += `<tr><td colspan="4" class="text-muted">لا توجد دفعات</td></tr>`;
+            }
+            draws.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(item => {
+                html += `<tr><td>${item.date}</td><td>${item.project||''}</td><td>${item.note||''}</td><td class="text-success fw-bold">${item.amount}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+        } else if (type === 'project') {
+            const proj = db.projects.find(p => p.name === name);
+            if (!proj) return;
+            html = `<h4><i class="fas fa-building text-success"></i> سجل تفصيلي: ${name}</h4>`;
+            const totalContract = parseFloat(proj.total || 0);
+            const draws = db.clientDraws.filter(d => d.project === name).reduce((s, d) => s + parseFloat(d.amount || 0), 0);
+            const expenses = db.entries.filter(e => e.project === name).reduce((s, e) => s + parseFloat(e.amount || 0), 0)
+                + db.expenses.filter(x => x.project === name).reduce((s, x) => s + parseFloat(x.amount || 0), 0);
+            const rem = totalContract - draws;
+
+            html += `<div class="row g-2 mb-3 text-center">
+                <div class="col-md-3"><div class="border rounded p-2 bg-primary text-white"><small>المتفق عليه</small><h5 class="mb-0">${totalContract}</h5></div></div>
+                <div class="col-md-3"><div class="border rounded p-2 bg-success text-white"><small>مستلم من العميل</small><h5 class="mb-0">${draws}</h5></div></div>
+                <div class="col-md-3"><div class="border rounded p-2 bg-danger text-white"><small>مصاريف المشروع</small><h5 class="mb-0">${expenses}</h5></div></div>
+                <div class="col-md-3"><div class="border rounded p-2 bg-warning"><small>المتبقي على العميل</small><h5 class="mb-0">${rem}</h5></div></div>
+            </div>`;
+
+            html += `<h6 class="mt-3 border-bottom pb-2">المستلم من العميل:</h6>`;
+            html += `<table class="table table-sm table-bordered text-center"><thead class="table-success"><tr><th>التاريخ</th><th>العميل</th><th>البيان</th><th>المبلغ</th></tr></thead><tbody>`;
+            const cdList = db.clientDraws.filter(d => d.project === name);
+            if (cdList.length === 0) html += `<tr><td colspan="4" class="text-muted">لا يوجد</td></tr>`;
+            cdList.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(d => {
+                html += `<tr><td>${d.date}</td><td>${d.client}</td><td>${d.note||''}</td><td class="text-success fw-bold">${d.amount}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+
+            html += `<h6 class="mt-3 border-bottom pb-2">المصاريف (يوميات + إضافي + مسحوبات):</h6>`;
+            html += `<table class="table table-sm table-bordered text-center"><thead class="table-danger"><tr><th>التاريخ</th><th>العامل</th><th>البيان</th><th>المبلغ</th></tr></thead><tbody>`;
+            const allExp = db.entries.filter(e => e.project === name).map(e => ({...e, _kind: 'entry'}))
+                .concat(db.expenses.filter(x => x.project === name).map(x => ({...x, _kind: 'exp', type: x.note + ' ('+x.day+')'})));
+            if (allExp.length === 0) html += `<tr><td colspan="4" class="text-muted">لا يوجد</td></tr>`;
+            allExp.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(item => {
+                html += `<tr><td>${item.date}</td><td>${item.worker||''}</td><td>${item.type||''}</td><td class="text-danger fw-bold">${item.amount}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+        }
+
+        document.getElementById('details-content').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('detailsModal')).show();
+    }
+
+    function generateWorkerReport() {
+        const name = document.getElementById('set_worker_select').value;
+        const projFilter = document.getElementById('set_project_select').value;
+        const worker = db.workers.find(w => w.name === name);
+        if(!worker) return;
+        document.getElementById('rep_w_name').innerText = worker.name;
+        document.getElementById('rep_w_job').innerText = worker.job;
+        document.getElementById('rep_w_img').src = worker.photo;
+        document.getElementById('rep_proj_name').innerText = projFilter === 'all' ? 'الكل' : projFilter;
+        let html = ''; let earned = 0, spent = 0;
+        const fDate = document.getElementById('set_from_date').value;
+        const tDate = document.getElementById('set_to_date').value;
+
+        db.entries.filter(e => e.worker === name && (projFilter==='all' || e.project===projFilter)).forEach(e => {
+            if((!fDate || e.date>=fDate) && (!tDate || e.date<=tDate)) {
+                html += `<tr><td>${e.date}</td><td>${e.project}</td><td>${e.type}</td><td class="text-success">${e.amount}</td><td>0</td></tr>`;
+                earned += e.amount;
+            }
+        });
+        db.expenses.filter(x => x.worker === name && (projFilter==='all' || x.project===projFilter)).forEach(x => {
+            if((!fDate || x.date>=fDate) && (!tDate || x.date<=tDate)) {
+                html += `<tr><td>${x.date}</td><td>${x.project}</td><td>${x.note} (${x.day})</td><td>0</td><td class="text-danger">${x.amount}</td></tr>`;
+                spent += x.amount;
+            }
+        });
+        document.getElementById('report_table_body').innerHTML = html;
+        document.getElementById('total_earned').innerText = earned;
+        document.getElementById('total_spent').innerText = spent;
+        document.getElementById('total_net').innerText = (earned - spent) + " ريال";
+    }
+
+    function secureReset() {
+        const pass = prompt("أدخل كلمة مرور التأكيد للمسح:");
+        if(pass === "3461") {
+            if(confirm("سيتم حذف كافة البيانات، هل أنت متأكد؟")) {
+                localStorage.clear(); location.reload();
+            }
+        } else { alert("كلمة المرور خاطئة!"); }
+    }
+
+    function refreshAll() {
+        document.getElementById('workerTableBody').innerHTML = db.workers.map((w,i) => `<tr><td><img src="${w.photo}" class="worker-img"></td><td>${w.name}</td><td>${w.job}</td><td><div class="btn-group btn-group-sm"><button class="btn btn-warning" onclick="editWorker(${i})">تعديل</button><button class="btn btn-dark" onclick="showDetails('worker','${w.name}')">عرض</button><button class="btn btn-danger" onclick="deleteItem('workers','${w.name}')">حذف</button></div></td></tr>`).join('');
+        document.getElementById('clientTableBody').innerHTML = db.clients.map((c,i) => `<tr><td><img src="${c.photo}" class="client-img"></td><td>${c.name}</td><td>${c.phone}</td><td><div class="btn-group btn-group-sm"><button class="btn btn-warning" onclick="editClient(${i})">تعديل</button><button class="btn btn-dark" onclick="showDetails('client','${c.name}')">عرض</button><button class="btn btn-danger" onclick="deleteItem('clients','${c.name}')">حذف</button></div></td></tr>`).join('');
+        document.getElementById('projectTableBody').innerHTML = db.projects.map((p,i) => `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.client}</td><td>${p.total}</td><td><div class="btn-group btn-group-sm"><button class="btn btn-warning" onclick="editProject(${i})">تعديل</button><button class="btn btn-dark" onclick="showDetails('project','${p.name}')">عرض</button><button class="btn btn-danger" onclick="deleteItem('projects','${p.name}')">حذف</button></div></td></tr>`).join('');
+        
+        const fillSelect = (id, list, key) => {
+            let el = document.getElementById(id); if(!el) return;
+            let options = list.map(i => `<option value="${i[key]}">${i[key]}</option>`).join('');
+            if(id.includes('set_project') || id.includes('rep_project')) options = '<option value="all">كل المشاريع</option>' + options;
+            el.innerHTML = options;
+        };
+        fillSelect('p_client', db.clients, 'name');
+        ['att','extra','exp'].forEach(p => { fillSelect(p+'_worker', db.workers, 'name'); fillSelect(p+'_project', db.projects, 'name'); });
+        fillSelect('set_worker_select', db.workers, 'name');
+        fillSelect('set_project_select', db.projects, 'name');
+        fillSelect('rep_project_select', db.projects, 'name');
+        fillSelect('cd_client', db.clients, 'name');
+        // تحديث قائمة المشاريع في مسحوبات العملاء حسب العميل المختار
+        if (typeof updateProjectListForClient === 'function') updateProjectListForClient();
+        generateBalancesTable();
+        renderUsersTable();
+    }
+
+    function deleteItem(type, name) {
+        if (!confirm("حذف؟ سيتم حذف جميع السجلات المرتبطة.")) return;
+
+        // التحقق من السجلات المرتبطة قبل الحذف
+        let linked = 0;
+        if (type === 'workers') {
+            linked = db.entries.filter(e => e.worker === name).length + db.expenses.filter(x => x.worker === name).length;
+        } else if (type === 'clients') {
+            linked = db.clientDraws.filter(d => d.client === name).length + db.projects.filter(p => p.client === name).length;
+        } else if (type === 'projects') {
+            linked = db.entries.filter(e => e.project === name).length + db.expenses.filter(x => x.project === name).length + db.clientDraws.filter(d => d.project === name).length;
+        }
+        if (linked > 0 && !confirm(`يوجد ${linked} سجل مرتبط سيتم حذفه أيضاً. متابعة؟`)) return;
+
+        if (type === 'workers') {
+            db.workers = db.workers.filter(i => i.name !== name);
+            db.entries = db.entries.filter(e => e.worker !== name);
+            db.expenses = db.expenses.filter(x => x.worker !== name);
+        } else if (type === 'clients') {
+            db.clients = db.clients.filter(i => i.name !== name);
+            db.clientDraws = db.clientDraws.filter(d => d.client !== name);
+        } else if (type === 'projects') {
+            db.projects = db.projects.filter(i => i.name !== name);
+            db.entries = db.entries.filter(e => e.project !== name);
+            db.expenses = db.expenses.filter(x => x.project !== name);
+            db.clientDraws = db.clientDraws.filter(d => d.project !== name);
+        } else {
+            db[type] = db[type].filter(i => (i.name || i.worker || i.client) !== name);
+        }
+        save();
+    }
+    
+    function generateBalancesTable() {
+        document.getElementById('balances_table_body').innerHTML = db.workers.map(w => {
+            let earned = db.entries.filter(e => e.worker === w.name).reduce((sum, e) => sum + e.amount, 0);
+            let spent = db.expenses.filter(x => x.worker === w.name).reduce((sum, x) => sum + x.amount, 0);
+            return `<tr><td>${w.name}</td><td class="text-success">${earned}</td><td class="text-danger">${spent}</td><td class="fw-bold">${earned-spent}</td></tr>`;
+        }).join('');
+    }
+
+    function generateProjectReport() {
+        const pName = document.getElementById('rep_project_select').value;
+        const proj = db.projects.find(p => p.name === pName); if(!proj) return;
+        document.getElementById('rp_p_name').innerText = proj.name;
+        document.getElementById('rp_c_name').innerText = proj.client;
+        document.getElementById('rp_p_total').innerText = proj.total;
+        let html = '', exp = 0, draws = 0;
+        db.entries.filter(e => e.project === pName).forEach(e => { html += `<tr><td>${e.date}</td><td>${e.worker}</td><td>${e.type}</td><td class="text-danger">${e.amount}</td><td>-</td></tr>`; exp += e.amount; });
+        db.expenses.filter(x => x.project === pName).forEach(x => { html += `<tr><td>${x.date}</td><td>${x.worker}</td><td>${x.note}</td><td class="text-danger">${x.amount}</td><td>-</td></tr>`; exp += x.amount; });
+        db.clientDraws.filter(d => d.project === pName).forEach(d => { html += `<tr class="table-success"><td>${d.date}</td><td>${d.note}</td><td>مستلم</td><td>-</td><td class="text-success">${d.amount}</td></tr>`; draws += d.amount; });
+        document.getElementById('project_rep_table').innerHTML = html;
+        document.getElementById('rp_p_spent').innerText = exp;
+        document.getElementById('rp_p_draws').innerText = draws;
+        document.getElementById('rp_p_rem').innerText = proj.total - draws;
+    }
+
+    function refreshMasterTables() {
+        document.getElementById('master_worker_body').innerHTML = db.workers.map(w => `<tr><td><img src="${w.photo}" style="width:40px;"></td><td>${w.name}</td><td>${w.job}</td></tr>`).join('');
+        document.getElementById('master_client_body').innerHTML = db.clients.map(c => `<tr><td><img src="${c.photo}" style="width:40px;"></td><td>${c.name}</td><td>${c.phone}</td></tr>`).join('');
+    }
+
+    function searchEverything() {
+        let f = document.getElementById('globalSearch').value.toUpperCase();
+        document.querySelectorAll('.card-menu').forEach(c => {
+            c.parentElement.style.display = c.innerText.toUpperCase().indexOf(f) > -1 ? "" : "none";
+        });
+    }
+
+    function exportToExcel() {
+        let ws = XLSX.utils.json_to_sheet(db.entries.concat(db.expenses));
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Data");
+        XLSX.writeFile(wb, "ERP_Islam_Khaled.xlsx");
+    }
+
+    function backupJSON() {
+        let blob = new Blob([JSON.stringify(db)], {type: "application/json"});
+        let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup_erp.json`; a.click();
+    }
+
+    function importData(e) {
+        let reader = new FileReader();
+        reader.onload = ev => { db = JSON.parse(ev.target.result); save(); location.reload(); };
+        reader.readAsText(e.target.files[0]);
+    }
+
+    // ============================================
+    // ===== إدارة المستخدمين (مُفعّلة بالكامل) =====
+    // ============================================
+
+    function addUser() {
+        const name = document.getElementById('new_user_name').value.trim();
+        const pass = document.getElementById('new_user_pass').value.trim();
+        const role = document.getElementById('new_user_role').value;
+        if (!name || !pass) return alert("الاسم وكلمة المرور مطلوبان");
+        if (db.users.find(u => u.name === name)) return alert("اسم المستخدم موجود مسبقاً");
+        if (name === "إسلام") return alert("لا يمكن إضافة مستخدم بهذا الاسم (محجوز)");
+        db.users.push({ name, pass, role, active: true, createdAt: new Date().toISOString() });
+        db.auditLog.push({ action: "إضافة مستخدم", user: sessionStorage.getItem('currentUser') || "", target: name, role, date: new Date().toISOString() });
+        save();
+        document.getElementById('new_user_name').value = "";
+        document.getElementById('new_user_pass').value = "";
+        alert("تمت إضافة المستخدم بنجاح");
+    }
+
+    function renderUsersTable() {
+        const tb = document.getElementById('usersTableBody');
+        if (!tb) return;
+        tb.innerHTML = db.users.map((u, i) => {
+            const isProtected = u.name === "إسلام";
+            const roleBadge = u.role === 'admin' ? '<span class="badge bg-primary">مدير</span>' : '<span class="badge bg-secondary">محاسب</span>';
+            const activeBadge = u.active === false ? '<span class="badge bg-danger ms-1">موقوف</span>' : '<span class="badge bg-success ms-1">نشط</span>';
+            const toggleBtn = u.active === false
+                ? `<button class="btn btn-sm btn-success" onclick="toggleUserActive(${i})" title="تفعيل"><i class="fas fa-unlock"></i></button>`
+                : `<button class="btn btn-sm btn-warning" onclick="toggleUserActive(${i})" title="إيقاف"><i class="fas fa-lock"></i></button>`;
+            const delBtn = isProtected ? '' : `<button class="btn btn-sm btn-danger" onclick="deleteUser(${i})" title="حذف"><i class="fas fa-trash"></i></button>`;
+            const editBtn = `<button class="btn btn-sm btn-info text-white" onclick="editUserPass(${i})" title="تغيير كلمة السر"><i class="fas fa-key"></i></button>`;
+            return `<tr>
+                <td>${u.name} ${activeBadge}</td>
+                <td>${roleBadge}</td>
+                <td><div class="btn-group btn-group-sm">${editBtn} ${toggleBtn} ${delBtn}</div></td>
+            </tr>`;
+        }).join('');
+    }
+
+    function editUserPass(idx) {
+        const u = db.users[idx];
+        const newPass = prompt(`أدخل كلمة مرور جديدة للمستخدم "${u.name}":`, "");
+        if (newPass === null) return;
+        if (newPass.trim() === "") return alert("كلمة المرور لا يمكن أن تكون فارغة");
+        u.pass = newPass.trim();
+        db.auditLog.push({ action: "تغيير كلمة مرور", user: sessionStorage.getItem('currentUser') || "", target: u.name, date: new Date().toISOString() });
+        save();
+        alert("تم تغيير كلمة المرور بنجاح");
+    }
+
+    function toggleUserActive(idx) {
+        const u = db.users[idx];
+        if (u.name === "إسلام") return alert("لا يمكن إيقاف حساب المدير الرئيسي");
+        u.active = u.active === false ? true : false;
+        db.auditLog.push({ action: u.active ? "تفعيل مستخدم" : "إيقاف مستخدم", user: sessionStorage.getItem('currentUser') || "", target: u.name, date: new Date().toISOString() });
+        save();
+    }
+
+    function deleteUser(idx) {
+        const u = db.users[idx];
+        if (u.name === "إسلام") return alert("لا يمكن حذف حساب المدير الرئيسي");
+        if (!confirm(`هل تريد حذف المستخدم "${u.name}"؟`)) return;
+        db.users.splice(idx, 1);
+        db.auditLog.push({ action: "حذف مستخدم", user: sessionStorage.getItem('currentUser') || "", target: u.name, date: new Date().toISOString() });
+        save();
+    }
+
+    // عرض سجل النشاطات (اختياري - للاستخدام المتقدم)
+    function showAuditLog() {
+        let html = `<h4><i class="fas fa-history"></i> سجل النشاطات</h4>`;
+        if (!db.auditLog || db.auditLog.length === 0) {
+            html += `<p class="text-muted">لا توجد سجلات</p>`;
+        } else {
+            html += `<table class="table table-sm table-bordered text-center"><thead class="table-dark"><tr><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th></tr></thead><tbody>`;
+            db.auditLog.slice().reverse().slice(0, 100).forEach(l => {
+                const dt = l.date ? l.date.replace('T', ' ').substring(0, 19) : '';
+                const details = [l.target, l.client, l.project, l.amount].filter(x => x !== undefined && x !== '').join(' | ');
+                html += `<tr><td><small>${dt}</small></td><td>${l.user||''}</td><td>${l.action||''}</td><td><small>${details}</small></td></tr>`;
+            });
+            html += `</tbody></table>`;
+        }
+        document.getElementById('details-content').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('detailsModal')).show();
+    }
+
+    window.onload = () => {
+        if(sessionStorage.getItem('isLoggedIn') === 'true') {
+            document.getElementById('login-overlay').style.display = "none";
+            document.getElementById('main-system-content').style.display = "block";
+            applyPermissions(sessionStorage.getItem('userRole'));
+        }
+        const t = new Date().toISOString().split('T')[0];
+        ['att','extra','exp','cd','set_from','set_to'].forEach(id => { if(document.getElementById(id+'_date')) document.getElementById(id+'_date').value = t; });
+        
+        const gridHtml = weekDays.map(d => `<div class="d-flex justify-content-between mb-1 border-bottom small"><span>${d}</span><div><input type="radio" name="day_${d}" value="1"> 1 <input type="radio" name="day_${d}" value="0.5"> ½ <input type="radio" name="day_${d}" value="0" checked> 0</div></div>`).join('');
+        const extraGridHtml = weekDays.map(d => `<div class="d-flex justify-content-between mb-1 border-bottom small"><span>${d}</span><div><input type="radio" name="extra_day_${d}" value="1"> 1 <input type="radio" name="extra_day_${d}" value="0.5"> ½ <input type="radio" name="extra_day_${d}" value="0" checked> 0</div></div>`).join('');
+        
+        document.getElementById('days_grid').innerHTML = gridHtml;
+        document.getElementById('extra_days_grid').innerHTML = extraGridHtml;
+        document.getElementById('exp_days_grid').innerHTML = weekDays.slice(0,6).map(d => `<div class="border p-1 rounded bg-white small"><input type="checkbox" id="chk_${d}" checked> <label for="chk_${d}">${d}</label></div>`).join('');
+        refreshAll();
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
